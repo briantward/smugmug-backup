@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -162,7 +163,18 @@ func buildFilenameTemplate(filenameTemplate string) (*template.Template, error) 
 	if filenameTemplate == "" {
 		filenameTemplate = "{{.FileName}}"
 	}
-	tmpl, err := template.New("image_filename").Option("missingkey=error").Parse(filenameTemplate)
+
+	var fns = template.FuncMap{
+		"appendFileName": func(fileName string, imageKey string) string{
+			fileExtLoc := strings.LastIndex(fileName, ".")
+			prefix := fileName[:fileExtLoc]
+			extension := fileName[fileExtLoc:len(fileName)]
+			result := prefix + imageKey + extension
+			return result
+		},
+	}
+
+	tmpl, err := template.New("image_filename").Funcs(fns).Option("missingkey=error").Parse(filenameTemplate)
 	if err != nil {
 		return nil, err
 	}
