@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"io"
+	"crypto/md5"
+	"encoding/hex"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -48,4 +51,19 @@ func sameFileSizes(path string, fileSize int64) bool {
 		log.Fatal(err)
 	}
 	return fi.Size() == fileSize
+}
+
+func sameFileMD5Sum(path string,  md5sum string) bool {
+	fi, err := os.Open(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	hasher := md5.New()
+	if _, err := io.Copy(hasher, fi); err != nil {
+		log.Fatal(err)
+	}
+	computedMD5 := hex.EncodeToString(hasher.Sum(nil))
+	log.Infof("Hash %s", computedMD5)
+
+	return computedMD5 == md5sum
 }

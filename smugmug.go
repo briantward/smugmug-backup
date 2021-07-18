@@ -20,6 +20,7 @@ type Conf struct {
 	UserSecret         string // User secret
 	Destination        string // Backup destination folder
 	Filenames          string // Template for files naming
+	FilenamesUnique    string // Template for alternate unique files naming
 	UseMetadataTimes   bool   // When true, the last update timestamp will be retrieved from metadata
 	ForceMetadataTimes bool   // When true, then the last update timestamp is always retrieved and overwritten, also for existing files
 
@@ -114,6 +115,7 @@ func ReadConf() (*Conf, error) {
 		UserSecret:         viper.GetString("authentication.user_secret"),
 		Destination:        viper.GetString("store.destination"),
 		Filenames:          viper.GetString("store.file_names"),
+		FilenamesUnique:    viper.GetString("store.file_names_unique"),
 		UseMetadataTimes:   viper.GetBool("store.use_metadata_times"),
 		ForceMetadataTimes: viper.GetBool("store.force_metadata_times"),
 	}
@@ -132,8 +134,9 @@ type Worker struct {
 	req          requestsHandler
 	cfg          *Conf
 	errors       int
-	downloadFn   func(string, string, int64) (bool, error) // defined in struct for better testing
+	downloadFn   func(string, string, string, int64, string) (bool, error) // defined in struct for better testing
 	filenameTmpl *template.Template
+	filenameUniqueTmpl *template.Template
 }
 
 // New return a SmugMug backup configuration. It returns an error if it fails parsing
@@ -146,6 +149,7 @@ func New(cfg *Conf) (*Worker, error) {
 	handler := newHTTPHandler(cfg.ApiKey, cfg.ApiSecret, cfg.UserToken, cfg.UserSecret)
 
 	tmpl, err := buildFilenameTemplate(cfg.Filenames)
+	tmplUnique, err := buildUniqueFilenameTemplate(cfg.FilenamesUnique)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +159,7 @@ func New(cfg *Conf) (*Worker, error) {
 		req:          handler,
 		downloadFn:   handler.download,
 		filenameTmpl: tmpl,
+		filenameUniqueTmpl: tmplUnique,
 	}, nil
 }
 
@@ -162,6 +167,19 @@ func buildFilenameTemplate(filenameTemplate string) (*template.Template, error) 
 	// Use FileName as default
 	if filenameTemplate == "" {
 		filenameTemplate = "{{.FileName}}"
+	}
+
+	tmpl, err := template.New("image_filename").Option("missingkey=error").Parse(filenameTemplate)
+	if err != nil {
+		return nil, err
+	}
+	return tmpl, nil
+}
+
+func buildUniqueFilenameTemplate(filenameTemplate string) (*template.Template, error) {
+	// Use FileName with ImageKey appended as default
+	if filenameTemplate == "" {
+		filenameTemplate = "{{appendFileName .FileName .ImageKey}}"
 	}
 
 	var fns = template.FuncMap{
@@ -174,7 +192,7 @@ func buildFilenameTemplate(filenameTemplate string) (*template.Template, error) 
 		},
 	}
 
-	tmpl, err := template.New("image_filename").Funcs(fns).Option("missingkey=error").Parse(filenameTemplate)
+	tmpl, err := template.New("image_filename_unique").Funcs(fns).Option("missingkey=error").Parse(filenameTemplate)
 	if err != nil {
 		return nil, err
 	}

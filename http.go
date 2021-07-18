@@ -41,11 +41,26 @@ func (s *handler) get(url string, obj interface{}) error {
 
 // download the resource (image or video) from the given url to the given destination, checking
 // if a file with the same size exists (and skipping the download in that case, returning false)
-func (s *handler) download(dest, downloadURL string, fileSize int64) (bool, error) {
+func (s *handler) download(dest, destUnique, downloadURL string, fileSize int64, md5sum string) (bool, error) {
 	if _, err := os.Stat(dest); err == nil {
 		if sameFileSizes(dest, fileSize) {
 			log.Debug("File exists with same size:", downloadURL)
+			//if sameFileMD5Sum(dest, md5sum) {
+			//	log.Debug("File exists with same md5sum: ", md5sum)
+			//}
 			return false, nil
+		}
+		log.Debug("File exists but looks different, using unique identifier")
+		dest = destUnique
+		log.Debug("Checking if new unique filename exists: ", dest)
+		if _, err := os.Stat(dest); err == nil {
+			if sameFileSizes(dest, fileSize) {
+				log.Debug("Unique file exists with same size:", downloadURL)
+				//if sameFileMD5Sum(dest, md5sum) {
+				//	log.Debug("Unique fle exists with same md5sum: ", md5sum)
+				//}
+				return false, nil
+			}
 		}
 	}
 	log.Info("Getting ", downloadURL)

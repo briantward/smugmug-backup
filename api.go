@@ -13,7 +13,7 @@ type requestsHandler interface {
 	get(string, interface{}) error
 }
 
-// userAlbums returns the list of albums belonging to the suer
+// userAlbums returns the list of albums belonging to the user
 func (w *Worker) userAlbums() ([]album, error) {
 	uri := w.userAlbumsURI()
 	return w.albums(uri)
@@ -106,9 +106,10 @@ func (w *Worker) saveImage(image albumImage, folder string) error {
 		return errors.New("Unable to find valid image filename, skipping..")
 	}
 	dest := fmt.Sprintf("%s/%s", folder, image.Name())
+	destUnique := fmt.Sprintf("%s/%s", folder, image.NameUnique())
 	log.Debug(image.ArchivedUri)
 
-	ok, err := w.downloadFn(dest, image.ArchivedUri, image.ArchivedSize)
+	ok, err := w.downloadFn(dest, destUnique, image.ArchivedUri, image.ArchivedSize, image.ArchivedMD5)
 	if err != nil {
 		return err
 	}
@@ -126,6 +127,7 @@ func (w *Worker) saveVideo(image albumImage, folder string) error {
 		return errors.New("Unable to find valid video filename, skipping..")
 	}
 	dest := fmt.Sprintf("%s/%s", folder, image.Name())
+	destUnique := fmt.Sprintf("%s/%s", folder, image.NameUnique())
 
 	if image.Processing { // Skip videos if under processing
 		return fmt.Errorf("Skipping video %s because under processing, %#v\n", image.Name(), image)
@@ -137,7 +139,7 @@ func (w *Worker) saveVideo(image albumImage, folder string) error {
 		return fmt.Errorf("Cannot get URI for video %+v. Error: %v", image, err)
 	}
 
-	ok, err := w.downloadFn(dest, v.Response.LargestVideo.Url, v.Response.LargestVideo.Size)
+	ok, err := w.downloadFn(dest, destUnique, v.Response.LargestVideo.Url, v.Response.LargestVideo.Size, image.ArchivedMD5)
 	if err != nil {
 		return err
 	}

@@ -85,6 +85,7 @@ type albumImage struct {
 
 	fileDatetime  time.Time
 	builtFilename string // The final filename, after template replacements
+	builtFilenameUnique string // If duplicate filenames exist for different images
 }
 
 func (a *albumImage) buildFilename(tmpl *template.Template) error {
@@ -107,6 +108,26 @@ func (a *albumImage) buildFilename(tmpl *template.Template) error {
 	return nil
 }
 
+func (a *albumImage) buildFilenameUnique(tmpl *template.Template) error {
+	replacementVars := map[string]string{
+		"FileName":    a.FileName,
+		"ImageKey":    a.ImageKey,
+		"ArchivedMD5": a.ArchivedMD5,
+		"UploadKey":   a.UploadKey,
+	}
+
+	var builtFilename bytes.Buffer
+	if err := tmpl.Execute(&builtFilename, replacementVars); err != nil {
+		return err
+	}
+
+	a.builtFilenameUnique = builtFilename.String()
+	if a.builtFilenameUnique == "" {
+		return errors.New("Empty resulting name")
+	}
+	return nil
+}
+
 func (a *albumImage) Name() string {
 	if a.builtFilename != "" {
 		return a.builtFilename
@@ -116,6 +137,13 @@ func (a *albumImage) Name() string {
 		return a.FileName
 	}
 
+	return a.ImageKey
+}
+
+func (a *albumImage) NameUnique() string {
+	if a.builtFilenameUnique != "" {
+		return a.builtFilenameUnique
+	}
 	return a.ImageKey
 }
 
