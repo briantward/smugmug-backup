@@ -69,6 +69,9 @@ func (w *Worker) albumImages(firstURI string, albumPath string) ([]albumImage, e
 			if err := i.buildFilename(w.filenameTmpl); err != nil {
 				return nil, fmt.Errorf("Cannot build image filename: %v", err)
 			}
+			if err := i.buildFilenameUnique(w.filenameUniqueTmpl); err != nil {
+				return nil, fmt.Errorf("Cannot build unique image filename: %v", err)
+			}
 			images = append(images, i)
 		}
 		uri = a.Response.Pages.NextPage

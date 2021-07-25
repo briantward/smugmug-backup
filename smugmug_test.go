@@ -86,11 +86,12 @@ func TestRun(t *testing.T) {
 			albumURLPath:   albumURLPath,
 			albumImagesURI: albumImagesURI,
 		},
-		downloadFn: func(_, _ string, _ int64, _ string) (bool, error) {
+		downloadFn: func(_, _, _ string, _ int64, _ string) (bool, error) {
 			downloadCalled++
 			return true, nil
 		},
 		filenameTmpl: tmpl,
+		filenameUniqueTmpl: tmpl,
 	}
 	w.Run()
 

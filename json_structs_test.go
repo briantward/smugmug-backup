@@ -2,6 +2,7 @@ package smugmug
 
 import (
 	"html/template"
+	"strings"
 	"testing"
 )
 
@@ -95,3 +96,71 @@ func Test_albumImage_buildFilename(t *testing.T) {
 		})
 	}
 }
+
+func Test_albumImage_buildFilenameUnique(t *testing.T) {
+	type fields struct {
+		FileName    string
+		ImageKey    string
+		ArchivedMD5 string
+		UploadKey   string
+	}
+
+	f := fields{
+		FileName:    "FileNameValue.jpg",
+		ImageKey:    "ImageKeyValue",
+		ArchivedMD5: "ArchivedMD5Value",
+		UploadKey:   "UploadKeyValue",
+	}
+
+	tests := []struct {
+		name         string
+		fields       fields
+		filenameConf string
+		want         string
+		wantErr      bool
+	}{
+		{
+			name:         "appendfilename",
+			fields:       f,
+			filenameConf: "{{appendFileName .FileName .ImageKey}}",
+			want:         "FileNameValueImageKeyValue.jpg",
+			wantErr:      false,
+		},
+	}
+
+        var fns = template.FuncMap{
+                "appendFileName": func(fileName string, imageKey string) string{
+                        fileExtLoc := strings.LastIndex(fileName, ".")
+                        prefix := fileName[:fileExtLoc]
+                        extension := fileName[fileExtLoc:len(fileName)]
+                        result := prefix + imageKey + extension
+                        return result
+                },
+        }
+
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := &albumImage{
+				FileName:    tt.fields.FileName,
+				ImageKey:    tt.fields.ImageKey,
+				ArchivedMD5: tt.fields.ArchivedMD5,
+				UploadKey:   tt.fields.UploadKey,
+			}
+			tmpl, err := template.New("image_filename").Funcs(fns).Option("missingkey=error").Parse(tt.filenameConf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = a.buildFilenameUnique(tmpl)
+
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("error: %v, wantErr %v", err, tt.wantErr)
+			}
+
+			if err == nil && a.NameUnique() != tt.want {
+				t.Fatalf("want: %s, got: %s", tt.want, a.Name())
+			}
+		})
+	}
+}
+
