@@ -187,7 +187,7 @@ func buildUniqueFilenameTemplate(filenameTemplate string) (*template.Template, e
 			fileExtLoc := strings.LastIndex(fileName, ".")
 			prefix := fileName[:fileExtLoc]
 			extension := fileName[fileExtLoc:len(fileName)]
-			result := prefix + imageKey + extension
+			result := prefix + "-" + imageKey + extension
 			return result
 		},
 	}
